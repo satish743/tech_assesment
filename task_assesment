@@ -1,0 +1,94 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<stdint.h>
+//declare 1kb size and block//
+#define HEAP_SIZE 128 * 1024 
+#define MIN_BLOCK_SIZE 1024   
+typedef struct Block 
+{
+    size_t size;
+    int free;
+    struct Block *p;
+} Block;
+static char heap[HEAP_SIZE];  
+static Block *free_L = NULL; 
+static Block *last = NULL; 
+void initHeap() 
+{
+    free_L = (Block *)heap;
+    free_L->size = HEAP_SIZE - sizeof(Block);
+    free_L->free = 1;
+    free_L->p = NULL;
+}
+void *malloc(size_t size) 
+{
+   if (size < MIN_BLOCK_SIZE) 
+    {
+        size = MIN_BLOCK_SIZE;
+    }
+    Block *bestFit = NULL;
+    Block *current = free_L;
+    while (current) 
+    {
+        if (current->free && current->size >= size) 
+        {
+            if (!bestFit || current->size < bestFit->size)
+            {
+                bestFit = current;
+            }
+        }
+        current = current->p;
+    }
+    if (!bestFit) 
+    {
+        return NULL;
+    }
+if (bestFit->size >= size + sizeof(Block) + MIN_BLOCK_SIZE)
+    {
+        Block *newBlock = (Block *)((char *)bestFit + sizeof(Block) + size);
+        newBlock->size = bestFit->size - size - sizeof(Block);
+        newBlock->free = 1;
+        newBlock->p = bestFit->p;
+        bestFit->size = size;
+        bestFit->p = newBlock;
+    }
+    bestFit->free = 0;
+    last = bestFit;
+    return (char *)bestFit + sizeof(Block);
+}
+void free(void *ptr) 
+{
+    if (!ptr || last != (Block *)((char *)ptr - sizeof(Block))) 
+    {
+       
+    }
+    Block *blockToFree = (Block *)((char *)ptr - sizeof(Block));
+    blockToFree->free = 1;
+    Block *current = free_L;
+    while (current) 
+    {
+        if (current->free && current->p && current->p->free) 
+        {
+            current->size = current->size + sizeof(Block) + current->p->size;
+            current->p = current->p->p;
+        } else {
+            current = current->p;
+        }
+    }
+    last = NULL; 
+}
+int main() 
+{
+    initHeap();
+    void *ptr1 = malloc(sizeof(int) * 128); 
+    printf("The address of ptr1-%p\n", ptr1);
+    void *ptr2 = malloc(sizeof(uint8_t) * 1000); 
+    printf("The address of ptr2-%p\n", ptr2);
+    void *ptr3 = malloc(128 * 8 * 1024); 
+    printf("The address of ptr3-%p\n", ptr3);
+    free(ptr1);
+    free(ptr2);
+    free(ptr3);
+    return 0;
+}
